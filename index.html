@@ -23,11 +23,10 @@
     --text:          #1A2E42;
     --text-sub:      #3D5A72;
     --text-mute:     #7A9BB5;
-    
+
     --epic-accent:   #5B8DB8;
     --story-accent:  #7B6DB8;
     --sub-accent:    #4EA8A0;
-
 
     --brand-colors: #E8A598, #98C5B8, #A5B8E8, #C9A5E8, #E8C9A5, #A5E8C9, #E8A5C9, #C9E8A5;
 
@@ -305,7 +304,7 @@
 
   /* ── MODAL ── */
   .modal-overlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+    position: fixed; inset: 0; background: rgba(30,60,90,0.55); backdrop-filter: blur(4px);
     z-index: 1000; display: flex; align-items: flex-start; justify-content: center;
     padding: 40px 20px; opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
   }
@@ -444,6 +443,68 @@
   .empty-state-icon { font-size: 32px; opacity: 0.4; }
   .empty-state-text { font-size: 13px; }
 
+
+  /* ── STEP PROGRESS TRACK ── */
+  .steps-track-modal { position: relative; display: flex; flex-direction: column; }
+  .steps-track-modal::before {
+    content: ''; position: absolute; left: 15px; top: 20px; bottom: 20px;
+    width: 2px; background: var(--border); z-index: 0;
+  }
+  .step-progress-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 9px 10px 9px 0; cursor: pointer; user-select: none;
+    border-radius: var(--radius); transition: background var(--transition);
+    position: relative;
+  }
+  .step-progress-row:hover { background: var(--surface2); padding-left: 8px; margin-left: -8px; }
+  .step-prog-dot {
+    width: 32px; height: 32px; border-radius: 50%;
+    border: 2px solid var(--border); background: var(--surface3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: var(--text-mute);
+    flex-shrink: 0; position: relative; z-index: 1;
+    transition: all 0.22s ease;
+  }
+  .step-progress-row.spr-done .step-prog-dot { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .step-progress-row.spr-current .step-prog-dot {
+    background: var(--surface); border-color: var(--primary); border-width: 2.5px;
+    box-shadow: 0 0 0 5px rgba(91,141,184,0.15); color: var(--primary);
+  }
+  .step-prog-info { flex: 1; }
+  .step-prog-name { font-size: 13px; font-weight: 500; color: var(--text-mute); transition: color 0.18s; }
+  .step-progress-row.spr-done .step-prog-name { color: var(--text-sub); }
+  .step-progress-row.spr-current .step-prog-name { color: var(--text); font-weight: 600; }
+  .step-prog-badge { font-size: 10px; padding: 2px 8px; border-radius: 8px; margin-top: 2px; display: inline-block; }
+  .step-progress-row.spr-done .step-prog-badge { background: rgba(58,158,110,0.15); color: var(--success); }
+  .step-progress-row.spr-current .step-prog-badge { background: var(--primary-dim); color: var(--primary-dark); }
+  .step-progress-row.spr-pending .step-prog-badge { display: none; }
+  .step-prog-hint { font-size: 10px; color: var(--text-mute); opacity: 0; transition: opacity 0.15s; white-space: nowrap; }
+  .step-progress-row:hover .step-prog-hint { opacity: 1; }
+  .step-prog-overall { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--surface3); }
+  .step-prog-bar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .step-prog-bar-label { font-size: 11px; color: var(--text-sub); font-weight: 500; }
+  .step-prog-pct { font-size: 13px; font-weight: 700; color: var(--primary); }
+  .step-prog-bar-track { height: 7px; background: var(--surface3); border-radius: 4px; overflow: hidden; }
+  .step-prog-bar-fill { height: 100%; background: linear-gradient(90deg, var(--primary-light), var(--primary)); border-radius: 4px; transition: width 0.4s cubic-bezier(0.4,0,0.2,1); }
+
+  /* ── BRAND AUTOCOMPLETE ── */
+  .brand-input-wrap { position: relative; }
+  .brand-dropdown {
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 200;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+    margin-top: 2px; max-height: 160px; overflow-y: auto;
+    display: none;
+  }
+  .brand-dropdown.open { display: block; }
+  .brand-option {
+    padding: 8px 12px; font-size: 12px; cursor: pointer;
+    display: flex; align-items: center; gap: 8px;
+    transition: background var(--transition);
+  }
+  .brand-option:hover { background: var(--surface2); }
+  .brand-option-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
   /* GAS config banner */
   .gas-banner {
     background: rgba(114,99,110,0.12); border: 1px solid var(--primary);
@@ -575,11 +636,31 @@
         <!-- Steps/Stages - for epic & story only -->
         <div id="steps-section" class="field-group">
           <label class="field-label">步驟 / 階段</label>
-          <div class="steps-area" id="modal-steps-list"></div>
-          <button class="add-row-btn" onclick="addStepToModal()">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-            新增步驟
-          </button>
+          <!-- edit mode: add/remove steps -->
+          <div id="steps-edit-mode">
+            <div class="steps-area" id="modal-steps-list"></div>
+            <button class="add-row-btn" onclick="addStepToModal()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+              新增步驟
+            </button>
+          </div>
+          <!-- progress mode: click to advance -->
+          <div id="steps-progress-mode" style="display:none;">
+            <div class="steps-track-modal" id="modal-steps-track"></div>
+            <div class="step-prog-overall">
+              <div class="step-prog-bar-header">
+                <span class="step-prog-bar-label">整體完成度</span>
+                <span class="step-prog-pct" id="modal-steps-pct">0%</span>
+              </div>
+              <div class="step-prog-bar-track">
+                <div class="step-prog-bar-fill" id="modal-steps-bar" style="width:0%"></div>
+              </div>
+            </div>
+            <button class="add-row-btn" style="margin-top:8px;" onclick="switchToEditMode()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              編輯步驟名稱
+            </button>
+          </div>
         </div>
 
         <!-- Children list - stories of epic, or subtasks of story -->
@@ -612,7 +693,11 @@
         <!-- Brand (epic only) -->
         <div class="meta-item" id="brand-meta">
           <span class="meta-label">品牌</span>
-          <input id="modal-brand" class="field-input" placeholder="輸入品牌名" style="font-size:12px;" />
+          <div class="brand-input-wrap">
+            <input id="modal-brand" class="field-input" placeholder="輸入或選擇品牌…" style="font-size:12px;" autocomplete="off"
+              oninput="onBrandInput(this)" onfocus="onBrandInput(this)" onblur="hideBrandDropdown()" />
+            <div class="brand-dropdown" id="brand-dropdown"></div>
+          </div>
         </div>
         <!-- Deadline (epic only) -->
         <div class="meta-item" id="deadline-meta">
