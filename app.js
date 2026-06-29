@@ -20,13 +20,16 @@ const BRAND_PALETTE = [
 const TYPE_LABELS = { epic: 'Epic', story: 'Story', subtask: 'Subtask' };
 const TYPE_BADGES = { epic: 'badge-epic', story: 'badge-story', subtask: 'badge-subtask' };
 
+// ── GAS URL ────────────────────────────────────────────────
+const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbxQVu--3Xnpo5m4ftiyxz5fQFEjjS5oIMd4KK6js6w4uhTT3fxlZuH3R7gPw8Ox50or/exec';
+
 // ── STATE ──────────────────────────────────────────────────
 let state = {
   epics: [],       // [{ id, title, desc, brand, deadline, assignee, status, steps:[], storyIds:[], comments:[], createdAt }]
   stories: [],     // [{ id, epicId, title, desc, assignee, status, steps:[], subtaskIds:[], comments:[], createdAt }]
   subtasks: [],    // [{ id, storyId, title, desc, assignee, status, done, comments:[], createdAt }]
   globalStages: ['待開始','進行中','審查','完成'],  // default kanban columns
-  gasUrl: '',
+  gasUrl: DEFAULT_GAS_URL,
   brandFilter: '',
   timelineOffset: 0,
 };
@@ -34,15 +37,17 @@ let currentModal = null; // { type, id, isNew }
 let brandColorMap = {};
 
 // ── INIT ───────────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   loadFromLocal();
+  // 確保 GAS URL 永遠使用預設值
+  if (!state.gasUrl) state.gasUrl = DEFAULT_GAS_URL;
   buildBrandColorMap();
   renderAll();
   setupCommentShortcut();
-
-  if (!state.gasUrl) {
-    document.getElementById('gas-config-banner').style.display = 'flex';
-  }
+  // 隱藏 banner（已有 GAS）
+  document.getElementById('gas-config-banner').style.display = 'none';
+  // 自動從 GAS 載入最新資料
+  await loadFromGas();
 });
 
 function loadFromLocal() {
@@ -53,7 +58,8 @@ function loadFromLocal() {
       state = { ...state, ...parsed };
     } catch(e) {}
   }
-  document.getElementById('gas-url-input').value = state.gasUrl || '';
+  state.gasUrl = DEFAULT_GAS_URL;
+  document.getElementById('gas-url-input').value = state.gasUrl;
 }
 
 function saveToLocal() {
@@ -887,7 +893,8 @@ function openManageStepsModal() {
 
 // ── SETTINGS ───────────────────────────────────────────────
 function openSettingsModal() {
-  document.getElementById('gas-url-input').value = state.gasUrl || '';
+  state.gasUrl = DEFAULT_GAS_URL;
+  document.getElementById('gas-url-input').value = state.gasUrl;
   openModal('settings-modal');
 }
 
