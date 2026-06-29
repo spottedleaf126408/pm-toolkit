@@ -677,9 +677,73 @@ function getModalStatusValue() {
 
 // Steps in modal
 let modalSteps = [];
+let modalStepCurrent = 0; // how many steps are "done"
+let stepsInEditMode = false;
+
 function renderModalSteps(steps) {
   modalSteps = steps.map(s => ({ ...s }));
+  // restore currentStep from saved data
+  const saved = steps.findIndex(s => s.isCurrent);
+  modalStepCurrent = saved >= 0 ? saved : steps.filter(s => s.done).length;
+  // Show progress mode if steps exist and not new
+  if (modalSteps.length > 0 && !currentModal.isNew) {
+    showProgressMode();
+  } else {
+    showEditMode();
+  }
+}
+
+function showProgressMode() {
+  stepsInEditMode = false;
+  document.getElementById('steps-edit-mode').style.display = 'none';
+  document.getElementById('steps-progress-mode').style.display = 'block';
+  refreshStepsProgress();
+}
+
+function showEditMode() {
+  stepsInEditMode = true;
+  document.getElementById('steps-edit-mode').style.display = 'block';
+  document.getElementById('steps-progress-mode').style.display = 'none';
   refreshStepsList();
+}
+
+function switchToEditMode() {
+  showEditMode();
+}
+
+function refreshStepsProgress() {
+  const track = document.getElementById('modal-steps-track');
+  track.innerHTML = '';
+  const total = modalSteps.length;
+  if (total === 0) return;
+
+  modalSteps.forEach((step, i) => {
+    let state = i < modalStepCurrent ? 'spr-done' : i === modalStepCurrent ? 'spr-current' : 'spr-pending';
+    const row = document.createElement('div');
+    row.className = 'step-progress-row ' + state;
+    const dot = state === 'spr-done' ? '✓' : (i + 1);
+    const badge = state === 'spr-done'
+      ? '<span class="step-prog-badge">已完成</span>'
+      : state === 'spr-current'
+      ? '<span class="step-prog-badge">進行中</span>' : '';
+    const hint = state === 'spr-done' ? '點此退回' : state === 'spr-current' ? '點此完成' : '點此跳至';
+    row.innerHTML = `
+      <div class="step-prog-dot">${dot}</div>
+      <div class="step-prog-info">
+        <div class="step-prog-name">${esc(step.name)}</div>${badge}
+      </div>
+      <span class="step-prog-hint">${hint}</span>`;
+    row.onclick = () => {
+      if (i < modalStepCurrent) { modalStepCurrent = i; }
+      else { modalStepCurrent = Math.min(i + 1, total); }
+      refreshStepsProgress();
+    };
+    track.appendChild(row);
+  });
+
+  const pct = Math.round(modalStepCurrent / total * 100);
+  document.getElementById('modal-steps-bar').style.width = pct + '%';
+  document.getElementById('modal-steps-pct').textContent = pct + '%';
 }
 
 function refreshStepsList() {
@@ -691,7 +755,6 @@ function refreshStepsList() {
     el.innerHTML = `
       <span class="step-drag" draggable="true">⠿</span>
       <input class="step-name-input" value="${esc(step.name || '')}" placeholder="步驟名稱…" oninput="modalSteps[${idx}].name=this.value" />
-      <span class="step-count">${step.commentCount || 0} 留言</span>
       <div class="step-actions">
         <button class="step-del-btn" onclick="removeStep(${idx})">✕</button>
       </div>`;
@@ -700,9 +763,8 @@ function refreshStepsList() {
 }
 
 function addStepToModal() {
-  modalSteps.push({ name: '', commentCount: 0 });
+  modalSteps.push({ name: '', done: false });
   refreshStepsList();
-  // Focus last input
   setTimeout(() => {
     const inputs = document.querySelectorAll('.step-name-input');
     if (inputs.length) inputs[inputs.length-1].focus();
@@ -711,6 +773,7 @@ function addStepToModal() {
 
 function removeStep(idx) {
   modalSteps.splice(idx, 1);
+  if (modalStepCurrent > modalSteps.length) modalStepCurrent = modalSteps.length;
   refreshStepsList();
 }
 
@@ -804,7 +867,11 @@ function saveCurrentTicket() {
   const desc      = document.getElementById('modal-desc').value.trim();
   const assignee  = document.getElementById('modal-assignee').value.trim();
   const status    = getModalStatusValue();
-  const steps     = modalSteps.filter(s => s.name.trim());
+  const steps     = modalSteps.filter(s => s.name.trim()).map((s, i) => ({
+    ...s,
+    done: i < modalStepCurrent,
+    isCurrent: i === modalStepCurrent,
+  }));
   const pendingComments = window._pendingComments || [];
   window._pendingComments = [];
 
@@ -957,6 +1024,41 @@ function showLoading(msg) {
 }
 function hideLoading() {
   document.getElementById('loading-overlay').style.display = 'none';
+}
+
+
+// ── BRAND AUTOCOMPLETE ────────────────────────────────────
+function onBrandInput(input) {
+  const val = input.value.trim().toLowerCase();
+  const dropdown = document.getElementById('brand-dropdown');
+  const brands = [...new Set(state.epics.map(e => e.brand).filter(Boolean))];
+  const matches = val
+    ? brands.filter(b => b.toLowerCase().includes(val))
+    : brands;
+
+  if (matches.length === 0) { dropdown.classList.remove('open'); return; }
+
+  dropdown.innerHTML = '';
+  matches.forEach(brand => {
+    const color = getBrandColor(brand);
+    const opt = document.createElement('div');
+    opt.className = 'brand-option';
+    opt.innerHTML = `<div class="brand-option-dot" style="background:${color}"></div>${esc(brand)}`;
+    opt.onmousedown = (e) => {
+      e.preventDefault();
+      input.value = brand;
+      dropdown.classList.remove('open');
+    };
+    dropdown.appendChild(opt);
+  });
+  dropdown.classList.add('open');
+}
+
+function hideBrandDropdown() {
+  setTimeout(() => {
+    const d = document.getElementById('brand-dropdown');
+    if (d) d.classList.remove('open');
+  }, 150);
 }
 
 // ── UTILS ──────────────────────────────────────────────────
